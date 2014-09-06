@@ -1,3 +1,4 @@
+require 'webmock/rspec'
 require 'pry'
 require 'doc_repo'
 

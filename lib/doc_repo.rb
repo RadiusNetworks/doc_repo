@@ -5,7 +5,7 @@ require "doc_repo/github_file"
 require "doc_repo/page"
 require "doc_repo/repository"
 require "doc_repo/response"
-require "doc_repo/converters/markdown_renderer"
+require "doc_repo/converters/markdown_parser"
 
 module DocRepo
   BadPageFormat = Class.new(StandardError)

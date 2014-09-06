@@ -10,21 +10,21 @@ RSpec.describe DocRepo::Page do
   end
 
   it "returns the markdown as html" do
-    body = <<-END.strip_heredoc do |file|
+    body = <<-END.strip_heredoc
       # A heading
 
       Some content
-      END
+    END
 
-      stub_request(:get, "https://api.github.com/repos/RadiusNetworks/proximitykit-documentation/contents/docs/page.md?ref=master")
-        .to_return(body: body)
+    stub_request(:get, "https://api.github.com/repos/RadiusNetworks/doc_spec/contents/docs/page.md?ref=master")
+      .to_return(body: body)
 
-      page = DocRepo::Page.new("page")
-      expect(page.to_html).to eq <<-END.strip_heredoc
+
+    page = DocRepo::Page.new("page")
+    expect(page.to_html).to eq <<-END.strip_heredoc
         <h1 id=\"a-heading\">A heading</h1>
 
         <p>Some content</p>
-      END
-    end
+    END
   end
 end

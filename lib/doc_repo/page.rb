@@ -7,7 +7,7 @@ module DocRepo
     end
 
     def to_html
-      Converters::Markdown::RedcarpetParser.new(
+      Converters::MarkdownParser.new(
         extensions: %i[
           no_intra_emphasis
           tables
