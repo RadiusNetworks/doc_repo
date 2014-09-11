@@ -9,14 +9,16 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Christopher Sexton"]
   spec.email         = ["github@codeography.com"]
   spec.summary       = "Doc Repo: Load in app documentation via an external Github repo"
-  spec.description   = ""
-  spec.homepage      = ""
+  spec.description   = "Doc Repo: Load in app documentation via an external Github repo"
+  spec.homepage      = "https://github.com/RadiusNetworks/doc_repo"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0")
-  spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
+  spec.executables   = %w[ ]
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
+
+  spec.required_ruby_version = '~> 2.0'
 
   spec.add_dependency "rouge", "~> 1.6"
   spec.add_dependency "redcarpet", "~> 3.1"
@@ -25,5 +27,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "webmock", "~> 1.0"
   spec.add_development_dependency "rspec", "~> 3.0"
-  spec.add_development_dependency "pry"
+  spec.add_development_dependency "pry-nav"
 end
