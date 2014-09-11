@@ -14,11 +14,11 @@ module DocRepo
     end
 
     def html
-      yield *params if type == :html
+      yield(*params) if type == :html
     end
 
     def redirect
-      yield *params if type == :redirect
+      yield(*params) if type == :redirect
     end
   end
 end

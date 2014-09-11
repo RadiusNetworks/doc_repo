@@ -25,7 +25,7 @@ module DocRepo
           "<div class=\"highlight\">#{add_code_tags(code, lang)}</div>"
         end
 
-        protected
+      protected
 
         def rouge_formatter(opts = {})
           Rouge::Formatters::HTML.new(opts.merge(wrap: false))
@@ -51,8 +51,8 @@ module DocRepo
         markdown.render(content)
       end
 
-      private
       attr_reader :config, :extensions, :renderer
+      private :config, :extensions, :renderer
     end
   end
 end
