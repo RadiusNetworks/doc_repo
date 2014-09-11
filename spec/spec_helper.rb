@@ -1,4 +1,5 @@
-require 'doc_repo'
+# This is a very warning riddled gem, load it before we enable warnings
+require 'rouge'
 
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
@@ -16,3 +17,6 @@ RSpec.configure do |config|
   end
   Kernel.srand config.seed
 end
+
+# Load our lib after warnings are enabled so we can fix them
+require 'doc_repo'
