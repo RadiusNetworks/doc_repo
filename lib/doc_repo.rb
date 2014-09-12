@@ -1,13 +1,12 @@
 require "doc_repo/version"
 
-require "doc_repo/configuration"
-require "doc_repo/github_file"
-require "doc_repo/page"
-require "doc_repo/repository"
-require "doc_repo/response"
-require "doc_repo/converters/markdown_parser"
-
 module DocRepo
+  autoload :Configuration, "doc_repo/configuration"
+  autoload :GithubFile, "doc_repo/github_file"
+  autoload :Page, "doc_repo/page"
+  autoload :Repository, "doc_repo/repository"
+  autoload :Response, "doc_repo/response"
+
   BadPageFormat = Class.new(StandardError)
   NotFound      = Class.new(StandardError)
 

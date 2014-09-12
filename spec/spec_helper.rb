@@ -1,17 +1,7 @@
-require 'webmock/rspec'
-require 'pry'
-require 'doc_repo'
-
-Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
+# This is a very warning riddled gem, load it before we enable warnings
+require 'rouge'
 
 RSpec.configure do |config|
-
-  config.before do
-    DocRepo.configure do |c|
-      c.org = 'RadiusNetworks'
-      c.repo = 'doc_spec'
-    end
-  end
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
   end
@@ -27,3 +17,6 @@ RSpec.configure do |config|
   end
   Kernel.srand config.seed
 end
+
+# Load our lib after warnings are enabled so we can fix them
+require 'doc_repo'
