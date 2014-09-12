@@ -7,7 +7,6 @@
 /pkg/
 /spec/reports/
 /tmp/
-*.bundle
 *.so
 *.o
 *.a
@@ -15,3 +14,7 @@ mkmf.log
 
 # Ignore development related binstubs
 /bin/
+
+# Ignore bundler related files
+/bundle/
+*.bundle
