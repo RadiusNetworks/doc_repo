@@ -1,3 +1,5 @@
+require "doc_repo/converters/markdown_parser"
+
 module DocRepo
   class Page
     attr_accessor :body
