@@ -43,7 +43,8 @@ Create a controller to render the documentation pages. In Rails you might use so
 ```ruby
 class DocsController < ApplicationController
   def index
-    # If you don't want to store the index view in the app, just redirect to one of the documentation pages:
+    # If you don't want to store the index view in the app, just redirect to
+    # one of the documentation pages:
     redirect_to doc_path('index')
   end
 
