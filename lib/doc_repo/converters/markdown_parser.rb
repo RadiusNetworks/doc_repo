@@ -27,9 +27,10 @@ module DocRepo
 
       protected
 
-        def rouge_formatter(opts = {})
-          Rouge::Formatters::HTML.new(opts.merge(wrap: false))
+        def rouge_formatter(lexer)
+          Rouge::Formatters::HTML.new(wrap: false)
         end
+
       end
 
       def initialize(config)
