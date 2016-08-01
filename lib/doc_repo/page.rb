@@ -5,7 +5,15 @@ module DocRepo
     attr_accessor :body
 
     def initialize(file)
-      @body = GithubFile.new("#{file}.md").read_remote_file
+      @body = GithubFile.new(default_ext(file)).read_remote_file
+    end
+
+    def default_ext(file)
+      if File.extname(file).empty?
+        "#{file}.md"
+      else
+        file
+      end
     end
 
     def to_html
