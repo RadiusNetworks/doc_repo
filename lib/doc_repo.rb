@@ -8,7 +8,13 @@ module DocRepo
   autoload :Response, "doc_repo/response"
 
   BadPageFormat = Class.new(StandardError)
-  NotFound      = Class.new(StandardError)
+  class NotFound < StandardError
+    attr_reader :base
+    def initialize(*args, base: $!)
+      @base = base
+      super(*args)
+    end
+  end
 
   class << self
     attr_accessor :configuration

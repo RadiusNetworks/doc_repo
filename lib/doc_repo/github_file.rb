@@ -20,8 +20,8 @@ module DocRepo
 
     def read_remote_file
       open(url(file), headers).read
-    rescue OpenURI::HTTPError => _ignore
-      raise DocRepo::NotFound
+    rescue OpenURI::HTTPError => http_error
+      raise DocRepo::NotFound.new(base: http_error)
     end
 
     def headers
