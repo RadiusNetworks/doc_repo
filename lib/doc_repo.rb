@@ -17,11 +17,14 @@ module DocRepo
   end
 
   class << self
-    attr_accessor :configuration
+    attr_reader :configuration
+
+    def configuration
+      @configuration ||= Configuration.new
+    end
   end
 
   def self.configure
-    self.configuration ||= Configuration.new
     yield(configuration) if block_given?
   end
 
