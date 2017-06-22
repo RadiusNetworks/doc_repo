@@ -3,7 +3,7 @@ require 'open-uri'
 module DocRepo
   class GithubFile
 
-    attr_reader :org, :repo, :branch, :file
+    attr_reader :org, :repo, :branch, :file, :raw_url
     def initialize(file,
                    org: DocRepo.configuration.org,
                    repo: DocRepo.configuration.repo,
@@ -12,14 +12,13 @@ module DocRepo
       @org = org
       @repo = repo
       @branch = branch
+      @raw_url = url(file)
     end
 
-    def redirect_url
-      "https://github.com/#{org}/#{repo}/raw/#{branch}/docs/#{file}"
-    end
+    alias_method :redirect_url, :raw_url
 
     def read_remote_file
-      open(url(file), headers).read
+      open(raw_url, headers).read
     rescue OpenURI::HTTPError => http_error
       raise DocRepo::NotFound.new(base: http_error)
     end
@@ -38,7 +37,7 @@ module DocRepo
     end
 
     def url(file)
-      "https://api.github.com/repos/#{org}/#{repo}/contents/docs/#{file}?ref=#{branch}"
+      "https://raw.githubusercontent.com/#{org}/#{repo}/#{branch}/docs/#{file}"
     end
   end
 end

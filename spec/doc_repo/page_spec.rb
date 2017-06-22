@@ -27,7 +27,7 @@ RSpec.describe DocRepo::Page do
   }
 
   it "returns the markdown as html when there is no extension" do
-    stub_request(:get, "https://api.github.com/repos/RadiusNetworks/doc_spec/contents/docs/page.md?ref=master")
+    stub_request(:get, "https://raw.githubusercontent.com/RadiusNetworks/doc_spec/master/docs/page.md")
       .to_return(body: body)
 
     page = DocRepo::Page.new("page")
@@ -35,7 +35,7 @@ RSpec.describe DocRepo::Page do
   end
 
   it "returns the markdown as html when there is a .md extension" do
-    stub_request(:get, "https://api.github.com/repos/RadiusNetworks/doc_spec/contents/docs/page.md?ref=master")
+    stub_request(:get, "https://raw.githubusercontent.com/RadiusNetworks/doc_spec/master/docs/page.md")
       .to_return(body: body)
 
     page = DocRepo::Page.new("page.md")
