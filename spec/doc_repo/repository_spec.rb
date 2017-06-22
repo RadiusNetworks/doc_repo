@@ -16,9 +16,10 @@ RSpec.describe DocRepo::Repository do
 
     repo.respond("sonic_screwdriver.png") do |r|
       r.redirect do |url|
-        expect( url ).to match %r{.*raw/master/docs/sonic_screwdriver.png}
+        expect( url ).to match %r{https://raw\..*/master/docs/sonic_screwdriver.png}
       end
     end
   end
+
 end
 
