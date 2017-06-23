@@ -17,7 +17,7 @@ module DocRepo
   end
 
   class << self
-    attr_reader :configuration
+    attr_writer :configuration
 
     def configuration
       @configuration ||= Configuration.new
