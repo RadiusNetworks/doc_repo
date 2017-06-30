@@ -20,11 +20,26 @@ module DocRepo
 
     setting :branch, default: "master"
 
+    setting :doc_formats, default: %w[
+      .md
+      .markdown
+      .htm
+      .html
+    ].freeze
+
     setting :doc_root, default: "docs"
+
+    setting :fallback_ext, default: ".md"
 
     setting :org
 
     setting :repo
+
+    def inspect
+      settings = to_h.map { |setting, value| "#{setting}=#{value.inspect}" }
+                     .join(", ")
+      "#<#{self.class}:0x%014x #{settings}>" % (object_id << 1)
+    end
 
     def to_h
       Settings.instance_methods(_include_super = false)

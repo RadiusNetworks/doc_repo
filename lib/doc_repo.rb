@@ -1,20 +1,15 @@
+# frozen_string_literal: true
 require "doc_repo/version"
 
 module DocRepo
-  autoload :Configuration, "doc_repo/configuration"
+  require_relative "doc_repo/configuration"
+  require_relative 'doc_repo/error'
+
   autoload :GithubFile, "doc_repo/github_file"
   autoload :Page, "doc_repo/page"
   autoload :Repository, "doc_repo/repository"
   autoload :Response, "doc_repo/response"
   autoload :ResultHandler, "doc_repo/result_handler"
-
-  class NotFound < StandardError
-    attr_reader :base
-    def initialize(*args, base: $!)
-      @base = base
-      super(*args)
-    end
-  end
 
   class << self
     attr_writer :configuration
@@ -28,8 +23,7 @@ module DocRepo
     yield(configuration) if block_given?
   end
 
-  def self.respond_with(slug, &block)
-    Repository.new.respond(slug, &block)
+  def self.request(slug, &block)
+    Repository.new(configuration).request(slug, &block)
   end
 end
-

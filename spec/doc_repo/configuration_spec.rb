@@ -18,8 +18,21 @@ RSpec.describe DocRepo::Configuration do
       expect(default_config.branch).to eq 'master'
     end
 
+    it "defaults to markdown and HTML as documentation formats" do
+      expect(default_config.doc_formats).to match_array %w[
+        .md
+        .markdown
+        .htm
+        .html
+      ]
+    end
+
     it "defaults to a 'docs' root path" do
       expect(default_config.doc_root).to eq 'docs'
+    end
+
+    it "defaults to '.md' for the fallback extension" do
+      expect(default_config.fallback_ext).to eq '.md'
     end
 
     it "has no org set" do
@@ -33,7 +46,9 @@ RSpec.describe DocRepo::Configuration do
     it "converting to a hash includes all settings" do
       expect(default_config.to_h.keys).to match_array %i[
         branch
+        doc_formats
         doc_root
+        fallback_ext
         org
         repo
       ]
@@ -41,19 +56,25 @@ RSpec.describe DocRepo::Configuration do
   end
 
   include_examples "has setting", :branch
+  include_examples "has setting", :doc_formats
   include_examples "has setting", :doc_root
+  include_examples "has setting", :fallback_ext
   include_examples "has setting", :org
   include_examples "has setting", :repo
 
   it "converting to a hash maps all settings to configured values" do
     a_config = DocRepo::Configuration.new
     a_config.branch = "Any Branch"
+    a_config.doc_formats = %w[ .any .formats ]
     a_config.doc_root = "Any Doc Root"
+    a_config.fallback_ext = ".anything"
     a_config.org = "Any Org"
     a_config.repo = "Any Repo"
     expect(a_config.to_h).to eq(
       branch: "Any Branch",
+      doc_formats: %w[ .any .formats ],
       doc_root: "Any Doc Root",
+      fallback_ext: ".anything",
       org: "Any Org",
       repo: "Any Repo",
     )
