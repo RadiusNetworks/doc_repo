@@ -101,5 +101,7 @@ RSpec.configure do |config|
   config.alias_it_should_behave_like_to :include_behavior
 end
 
+require 'webmock/rspec'
+
 # Load our lib after warnings are enabled so we can fix them
 require 'doc_repo'

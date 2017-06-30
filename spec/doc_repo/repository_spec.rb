@@ -11,7 +11,12 @@ RSpec.describe DocRepo::Repository do
   end
 
   def any_handler
-    double("DocRepo::ResultHandler").as_null_object
+    DocRepo::ResultHandler.new.tap do |h|
+      h.complete {}
+      h.error {}
+      h.not_found {}
+      h.redirect {}
+    end
   end
 
   shared_examples "requesting a slug" do |slug_reader|
@@ -132,14 +137,20 @@ RSpec.describe DocRepo::Repository do
 
     include_examples "requesting a slug", :a_redirectable_slug
 
-    it "yields the redirect URL to the handler" do
+    it "yields the redirect result to the handler" do
       expect { |b|
         a_repo.request a_redirectable_slug do |result|
           result.redirect(&b)
         end
-      }.to yield_with_args <<~URL.chomp
-        https://raw.githubusercontent.com/org/repo/branch/root/slug.non_document
-      URL
+      }.to yield_with_args(
+        an_instance_of(
+          DocRepo::Redirect
+        ).and(
+          have_attributes(url:<<~URL.chomp)
+            https://raw.githubusercontent.com/org/repo/branch/root/slug.non_document
+          URL
+        )
+      )
     end
 
     it "raises when a handler is not configured for redirection" do
@@ -170,17 +181,21 @@ RSpec.describe DocRepo::Repository do
     let(:a_doc_slug) { "any-doc-slug.md" }
 
     let(:successful_http) {
-      double("DocRepo::NetHttpAdapter", detect: the_document)
+      instance_double("DocRepo::NetHttpAdapter", retrieve: the_document)
     }
 
     let(:the_document) {
-      DocRepo::Doc.new("uri")
+      http_response = instance_double(
+        "Net::HTTPSuccess",
+        code: "200",
+      ).as_null_object
+      DocRepo::Doc.new("uri", http_response)
     }
 
     include_examples "requesting a slug", :a_doc_slug
 
     it "fetches the document from the remote site" do
-      expect(successful_http).to receive(:detect).with(
+      expect(successful_http).to receive(:retrieve).with(
         "/org/repo/branch/root/any-doc-slug.md"
       )
       a_repo.request(a_doc_slug, result_handler: any_handler) { }
@@ -222,17 +237,22 @@ RSpec.describe DocRepo::Repository do
     let(:missing_doc_slug) { "missing-doc-slug.md" }
 
     let(:not_found_http) {
-      double("DocRepo::NetHttpAdapter", detect: not_found_result)
+      instance_double("DocRepo::NetHttpAdapter", retrieve: not_found_result)
     }
 
     let(:not_found_result) {
-      DocRepo::HttpError.new("uri", 404, "Any Message")
+      http_response = instance_double(
+        "Net::HTTPNotFound",
+        code: "404",
+        message: "Any Message",
+      )
+      DocRepo::HttpError.new("uri", http_response.as_null_object)
     }
 
     include_examples "requesting a slug", :missing_doc_slug
 
     it "attempts to fetch the document from the remote site" do
-      expect(not_found_http).to receive(:detect).with(
+      expect(not_found_http).to receive(:retrieve).with(
         "/org/repo/branch/root/missing-doc-slug.md"
       )
       a_repo.request(missing_doc_slug, result_handler: any_handler) { }
@@ -280,17 +300,22 @@ RSpec.describe DocRepo::Repository do
     let(:any_doc_slug) { "any-doc-slug.md" }
 
     let(:error_http) {
-      double("DocRepo::NetHttpAdapter", detect: error_result)
+      instance_double("DocRepo::NetHttpAdapter", retrieve: error_result)
     }
 
     let(:error_result) {
-      DocRepo::HttpError.new("uri", 400, "Any Message")
+      http_response = instance_double(
+        "Net::HTTPClientError",
+        code: "400",
+        message: "Any Message",
+      )
+      DocRepo::HttpError.new("uri", http_response.as_null_object)
     }
 
     include_examples "requesting a slug", :any_doc_slug
 
     it "attempts to fetch the document from the remote site" do
-      expect(error_http).to receive(:detect).with(
+      expect(error_http).to receive(:retrieve).with(
         "/org/repo/branch/root/any-doc-slug.md"
       )
       a_repo.request(any_doc_slug, result_handler: any_handler) { }

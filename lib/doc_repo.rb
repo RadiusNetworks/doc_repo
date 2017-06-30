@@ -5,6 +5,7 @@ module DocRepo
   require_relative "doc_repo/configuration"
   require_relative 'doc_repo/error'
 
+  autoload :NetHttpAdapter, "doc_repo/net_http_adapter"
   autoload :GithubFile, "doc_repo/github_file"
   autoload :Page, "doc_repo/page"
   autoload :Repository, "doc_repo/repository"
