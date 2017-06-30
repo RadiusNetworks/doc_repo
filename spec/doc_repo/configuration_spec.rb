@@ -18,6 +18,14 @@ RSpec.describe DocRepo::Configuration do
       expect(default_config.branch).to eq 'master'
     end
 
+    it "defaults to empty cache options" do
+      expect(default_config.cache_options).to eq({})
+    end
+
+    it "defaults to a null cache store" do
+      expect(default_config.cache_store).to be DocRepo::NullCache.instance
+    end
+
     it "defaults to markdown and HTML as documentation formats" do
       expect(default_config.doc_formats).to match_array %w[
         .md
@@ -46,6 +54,8 @@ RSpec.describe DocRepo::Configuration do
     it "converting to a hash includes all settings" do
       expect(default_config.to_h.keys).to match_array %i[
         branch
+        cache_options
+        cache_store
         doc_formats
         doc_root
         fallback_ext
@@ -56,6 +66,8 @@ RSpec.describe DocRepo::Configuration do
   end
 
   include_examples "has setting", :branch
+  include_examples "has setting", :cache_options
+  include_examples "has setting", :cache_store
   include_examples "has setting", :doc_formats
   include_examples "has setting", :doc_root
   include_examples "has setting", :fallback_ext
@@ -65,6 +77,8 @@ RSpec.describe DocRepo::Configuration do
   it "converting to a hash maps all settings to configured values" do
     a_config = DocRepo::Configuration.new
     a_config.branch = "Any Branch"
+    a_config.cache_options = "Any Cache Options"
+    a_config.cache_store = "Any Cache Store"
     a_config.doc_formats = %w[ .any .formats ]
     a_config.doc_root = "Any Doc Root"
     a_config.fallback_ext = ".anything"
@@ -72,6 +86,8 @@ RSpec.describe DocRepo::Configuration do
     a_config.repo = "Any Repo"
     expect(a_config.to_h).to eq(
       branch: "Any Branch",
+      cache_options: "Any Cache Options",
+      cache_store: "Any Cache Store",
       doc_formats: %w[ .any .formats ],
       doc_root: "Any Doc Root",
       fallback_ext: ".anything",

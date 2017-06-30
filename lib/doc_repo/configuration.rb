@@ -1,6 +1,19 @@
 # frozen_string_literal: true
+require 'singleton'
 
 module DocRepo
+  class NullCache
+    include Singleton
+    instance.freeze
+
+    def fetch(name, options = nil)
+      yield
+    end
+
+    def write(name, value, options = nil)
+    end
+  end
+
   class Configuration
     Settings = Module.new
     include Settings
@@ -19,6 +32,10 @@ module DocRepo
     private_class_method :setting
 
     setting :branch, default: "master"
+
+    setting :cache_options, default: {}
+
+    setting :cache_store, default: NullCache.instance
 
     setting :doc_formats, default: %w[
       .md
