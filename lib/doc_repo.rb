@@ -6,6 +6,7 @@ module DocRepo
   autoload :Page, "doc_repo/page"
   autoload :Repository, "doc_repo/repository"
   autoload :Response, "doc_repo/response"
+  autoload :ResultHandler, "doc_repo/result_handler"
 
   class NotFound < StandardError
     attr_reader :base
