@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require 'support/in_memory_cache'
 
 RSpec.describe DocRepo::NetHttpAdapter do
 
@@ -176,6 +177,101 @@ RSpec.describe DocRepo::NetHttpAdapter do
       message: '520 "Unknown Error"',
       details: "Any Socket Error",
     )
+  end
+
+  it "with no cache requests are always made over the network", :aggregate_failures do
+    no_cache = DocRepo::NetHttpAdapter.new("any.host")
+    stub_request(:get, "https://any.host/any.doc")
+      .to_return(status: 200)
+      .to_return(status: 500)
+    expect(no_cache.retrieve("/any.doc")).to be_an_instance_of(DocRepo::Doc)
+    expect(no_cache.retrieve("/any.doc")).to be_an_instance_of(DocRepo::HttpError)
+  end
+
+  context "with a cache store" do
+    subject(:cached_adapter) {
+      DocRepo::NetHttpAdapter.new(
+        "any.host",
+        cache: mem_cache,
+        cache_options: { any: :options },
+      )
+    }
+
+    let(:mem_cache) { DocRepo::Spec::InMemoryCache.new }
+
+    it "provides the cache options on every request", :aggregate_failures do
+      stub_request(:get, /.*/).to_return(status: 200)
+      expect {
+        cached_adapter.retrieve "/uri/1"
+      }.to change {
+        mem_cache.options
+      }.to eq "any.host:/uri/1" => { any: :options }
+
+      expect {
+        cached_adapter.retrieve "/uri/2"
+      }.to change {
+        mem_cache.options
+      }.to eq(
+        "any.host:/uri/1" => { any: :options },
+        "any.host:/uri/2" => { any: :options },
+      )
+
+      # Clear just the options, leave the cache alone
+      mem_cache.options.clear
+
+      expect {
+        cached_adapter.retrieve "/uri/2"
+      }.to change {
+        mem_cache.options
+      }.to eq "any.host:/uri/2" => { any: :options }
+    end
+
+    it "makes an HTTP request when the URI is not cached" do
+      http_request = stub_request(:get, /.*/).to_return(status: 200)
+      cached_adapter.retrieve "/uri/1"
+      expect(http_request).to have_been_requested
+    end
+
+    it "stores the HTTP response in the cache" do
+      stub_request(:get, /.*/).to_return(
+        status: [200, "Custom Code"],
+        body: "Any Content Body",
+      )
+      expect {
+        cached_adapter.retrieve "/uri/1"
+      }.to change {
+        mem_cache.cache
+      }.from(
+        {}
+      ).to(
+        "any.host:/uri/1" => an_instance_of(Net::HTTPOK).and(have_attributes(
+          code: "200",
+          message: "Custom Code",
+          body: "Any Content Body",
+        ))
+      )
+    end
+
+    it "re-uses the cached HTTP response" do
+      # Populate the cache with a response so we don't have to work with sockets
+      stub_request(:get, /.*/)
+        .to_return(status: 200, body: "Original Body")
+        .to_raise("Cache Not Used!")
+      cached_adapter.retrieve "/uri/1"
+
+      # Customize cache to show changes
+      cached_response = mem_cache.cache["any.host:/uri/1"]
+      cached_response.body = "Cached Body"
+      cached_response.content_type = "Cached Content"
+
+      expect(cached_adapter.retrieve("/uri/1")).to be_an_instance_of(
+        DocRepo::Doc
+      ).and have_attributes(
+        code: 200,
+        content: "Cached Body",
+        content_type: "Cached Content",
+      )
+    end
   end
 
 end

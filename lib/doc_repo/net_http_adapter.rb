@@ -32,7 +32,7 @@ module DocRepo
     private :cache
 
     def retrieve(uri)
-      resp = Net::HTTP.start(host, opts) { |http| http.get(uri) }
+      resp = http_cache(uri)
       case resp
       when Net::HTTPRedirection
         Redirect.new(
@@ -58,6 +58,20 @@ module DocRepo
     rescue => e
       # Covers IOError, Errno::*, and SocketError
       GatewayError.new(uri, code: UNKNOWN_ERROR, cause: e)
+    end
+
+  private
+
+    def cache_key(uri)
+      "#{host}:#{uri}"
+    end
+
+    def http_cache(uri)
+      # TODO: We may store cache for longer than valid according to headers.
+      #       When that's the case try to refresh.
+      cache.fetch(cache_key(uri), cache_options) {
+        Net::HTTP.start(host, opts) { |http| http.get(uri) }
+      }
     end
   end
 
