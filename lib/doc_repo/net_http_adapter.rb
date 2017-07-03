@@ -154,7 +154,8 @@ module DocRepo
         "If-None-Match" => expired["ETag"],
         "If-Modified-Since" => expired["Last-Modified"],
       }
-      preconditions.keep_if { |_k, v| v }
+      preconditions.compact!
+      preconditions
     end
 
     def expired?(resp)
