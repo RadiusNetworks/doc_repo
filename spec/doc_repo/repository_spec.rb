@@ -185,11 +185,7 @@ RSpec.describe DocRepo::Repository do
     }
 
     let(:the_document) {
-      http_response = instance_double(
-        "Net::HTTPSuccess",
-        code: "200",
-      ).as_null_object
-      DocRepo::Doc.new("uri", http_response)
+      instance_double("DocRepo::Doc", redirect?: false, success?: true)
     }
 
     include_examples "requesting a slug", :a_doc_slug

@@ -272,6 +272,181 @@ RSpec.describe DocRepo::NetHttpAdapter do
         content_type: "Cached Content",
       )
     end
+
+    it "performs a conditional GET when cache is expired according to the `Expires` header", :aggregate_failures do
+      # Populate the current cache via a response to avoid sockets
+      stub_request(:get, /.*/)
+        .to_return(
+          status: 200,
+          body: "Original Body",
+          headers: {
+            "ETag" => "Any ETag",
+            "Last-Modified" => "Sat, 01 Jul 2017 18:18:33 GMT",
+            "Expires" => (Time.now + 60).httpdate,  # 1 minute from now
+          },
+        )
+        .to_raise("Cache Not Used!")
+      cached_adapter.retrieve "/uri/1"
+
+      # Cache is current so this should return it
+      expect(cached_adapter.retrieve("/uri/1").content).to eq "Original Body"
+
+      # Artificially expire cache
+      mem_cache.cache["any.host:/uri/1"]["Expires"] = (Time.now - 1).httpdate
+
+      conditional_get = stub_request(:get, %r(.*/uri/1))
+        .with(
+          headers: {
+            "If-None-Match" => "Any ETag",
+            "If-Modified-Since" => "Sat, 01 Jul 2017 18:18:33 GMT",
+          }
+        )
+        .to_return(status: 304)
+      cached_adapter.retrieve "/uri/1"
+      expect(conditional_get).to have_been_requested
+
+      # Falls back to `Date` when `Last-Modified` isn't set
+      cache = mem_cache.cache["any.host:/uri/1"]
+      cache.delete "Last-Modified"
+      cache["Date"] = "Sat, 01 Jul 2017 19:00:01 GMT"
+      date_conditional_get = stub_request(:get, %r(.*/uri/1))
+        .with(
+          headers: {
+            "If-None-Match" => "Any ETag",
+            "If-Modified-Since" => "Sat, 01 Jul 2017 19:00:01 GMT",
+          }
+        )
+        .to_return(status: 304)
+      cached_adapter.retrieve "/uri/1"
+      expect(date_conditional_get).to have_been_requested
+    end
+
+    it "considers an invalid `Expires` header as expired" do
+      # Populate the current cache via a response to avoid sockets
+      stub_request(:get, /.*/)
+        .to_return(
+          status: 200,
+          body: "Original Body",
+          headers: {
+            "ETag" => "Any ETag",
+          },
+        )
+        .to_raise("Cache Not Used!")
+      cached_adapter.retrieve "/uri/1"
+
+      # Artificially expire cache with invalid value
+      mem_cache.cache["any.host:/uri/1"]["Expires"] = "0"
+
+      conditional_get = stub_request(:get, %r(.*/uri/1))
+        .with(
+          headers: {
+            "If-None-Match" => "Any ETag",
+          }
+        )
+        .to_return(status: 200)
+      cached_adapter.retrieve "/uri/1"
+      expect(conditional_get).to have_been_requested
+    end
+
+    it "refreshes expired cache which hasn't been modified", :aggregate_failures do
+      # Populate the current cache via a response to avoid sockets then expire
+      stub_request(:get, /.*/)
+        .to_return(
+          status: 200,
+          body: "Original Body",
+          headers: {
+            "ETag" => "Any ETag",
+            "Last-Modified" => "Sat, 01 Jul 2017 18:18:33 GMT",
+            "Expires" => (Time.now + 60).httpdate,  # 1 minute from now
+            "Content-Type" => "Original Content",
+            "Custom-A" => "Original Header",
+            "Custom-B" => "Original Header",
+          },
+        )
+        .to_raise("Cache Not Used!")
+      stub_request(:get, %r(.*/uri/1))
+        .with(
+          headers: {
+            "If-None-Match" => "Any ETag",
+            "If-Modified-Since" => "Sat, 01 Jul 2017 18:18:33 GMT",
+          }
+        )
+        .to_return(
+          status: 304,
+          body: "Updated Body",
+          headers: {
+            "ETag" => "Updated ETag",
+            "Content-Type" => "Updated Content",
+            "Custom-B" => "Updated Header",
+          },
+        )
+      cached_adapter.retrieve "/uri/1"
+      mem_cache.cache["any.host:/uri/1"]["Expires"] = (Time.now - 1).httpdate
+
+      expect(cached_adapter.retrieve("/uri/1")).to have_attributes(
+        code: 200,
+        content: "Original Body",
+        content_type: "Updated Content",
+        etag: "Updated ETag",
+      )
+      # Working with headers is painful with Net::HTTP responses
+      expect(mem_cache.cache["any.host:/uri/1"].to_hash).to include(
+        "etag" => ["Updated ETag"],
+        "last-modified" => ["Sat, 01 Jul 2017 18:18:33 GMT"],
+        "content-type" => ["Updated Content"],
+        "custom-a" => ["Original Header"],
+        "custom-b" => ["Updated Header"],
+      )
+    end
+
+    it "replaces expired cache which has been modified" do
+      # Populate the current cache via a response to avoid sockets then expire
+      stub_request(:get, /.*/)
+        .to_return(
+          status: 200,
+          body: "Original Body",
+          headers: {
+            "ETag" => "Any ETag",
+            "Last-Modified" => "Sat, 01 Jul 2017 18:18:33 GMT",
+            "Expires" => (Time.now + 60).httpdate,  # 1 minute from now
+            "Content-Type" => "Original Content",
+            "Custom-A" => "Original Header",
+            "Custom-B" => "Original Header",
+          },
+        )
+        .to_raise("Cache Not Used!")
+      stub_request(:get, %r(.*/uri/1))
+        .with(
+          headers: {
+            "If-None-Match" => "Any ETag",
+            "If-Modified-Since" => "Sat, 01 Jul 2017 18:18:33 GMT",
+          }
+        )
+        .to_return(
+          status: 201,
+          body: "Updated Body",
+          headers: {
+            "ETag" => "Updated ETag",
+            "Content-Type" => "Updated Content",
+            "Custom-B" => "Updated Header",
+          },
+        )
+      cached_adapter.retrieve "/uri/1"
+      mem_cache.cache["any.host:/uri/1"]["Expires"] = (Time.now - 1).httpdate
+
+      expect(cached_adapter.retrieve("/uri/1")).to have_attributes(
+        code: 201,
+        content: "Updated Body",
+        content_type: "Updated Content",
+        etag: "Updated ETag",
+      )
+      # Working with headers is painful with Net::HTTP responses
+      expect(mem_cache.cache["any.host:/uri/1"].to_hash).to eq(
+        "etag" => ["Updated ETag"],
+        "content-type" => ["Updated Content"],
+        "custom-b" => ["Updated Header"],
+      )
+    end
   end
 
 end

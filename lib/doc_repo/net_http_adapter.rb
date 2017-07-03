@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 require 'net/http'
+require 'time'
 
 module DocRepo
   # @api private
@@ -66,12 +67,68 @@ module DocRepo
       "#{host}:#{uri}"
     end
 
+    def expired?(resp)
+      # TODO: Use `Cache-Control` header when available
+      expires_at = resp['Expires']
+      expires_at && Time.httpdate(expires_at) < Time.now
+    rescue ArgumentError => _e
+      # Raised when `Time.parse` cannot parse the value
+      #
+      # Per the HTTP 1.1 RFC regarding the `Expires` header:
+      #
+      # > A cache recipient MUST interpret invalid date formats, especially the
+      # > value "0", as representing a time in the past (i.e., "already
+      # > expired").
+      # >
+      # > -- https://tools.ietf.org/html/rfc7234#section-5.3
+      true
+    end
+
     def http_cache(uri)
-      # TODO: We may store cache for longer than valid according to headers.
-      #       When that's the case try to refresh.
-      cache.fetch(cache_key(uri), cache_options) {
+      uri_key = cache_key(uri)
+      resp = cache.fetch(uri_key, cache_options) {
         Net::HTTP.start(host, opts) { |http| http.get(uri) }
       }
+      if expired?(resp)
+        resp = refresh(uri, resp)
+        cache.write uri_key, resp, cache_options
+      end
+      resp
+    end
+
+    def refresh(uri, expired)
+      # Per the HTTP 1.1 RFC regarding the `If-Modified-Since` header:
+      #
+      # > When used for cache updates, a cache will typically use the value of
+      # > the cached message's Last-Modified field to generate the field value
+      # > of If-Modified-Since.  This behavior is most interoperable for cases
+      # > where clocks are poorly synchronized or when the server has chosen to
+      # > only honor exact timestamp matches (due to a problem with
+      # > Last-Modified dates that appear to go "back in time" when the origin
+      # > server's clock is corrected or a representation is restored from an
+      # > archived backup).  However, caches occasionally generate the field
+      # > value based on other data, such as the Date header field of the
+      # > cached message or the local clock time that the message was received,
+      # > particularly when the cached message does not contain a Last-Modified
+      # > field.
+      # >
+      # > -- https://tools.ietf.org/html/rfc7232#section-3.3
+      fresh = Net::HTTP.start(host, opts) { |http|
+        http.get(
+          uri,
+          {
+            "If-None-Match" => expired["ETag"],
+            "If-Modified-Since" => expired["Last-Modified"] || expired["Date"],
+          }.keep_if { |_k, v| v }
+        )
+      }
+      if Net::HTTPNotModified === fresh
+        fresh.each_header do |k, v|
+          expired[k] = v
+        end
+        fresh = expired
+      end
+      fresh
     end
   end
 
@@ -123,7 +180,13 @@ module DocRepo
     def initialize(uri, http_response)
       @http = http_response
       init_result_readers(uri, @http.code)
+      @etag = @http['ETag'].dup.freeze
+
+      # NOTE: Not set by Github raw site - we include it for future proofing
+      @last_modified = Time.httpdate(@http['Last-Modified']).freeze rescue nil
     end
+
+    attr_reader :etag, :last_modified
 
     attr_reader :http
     private :http
