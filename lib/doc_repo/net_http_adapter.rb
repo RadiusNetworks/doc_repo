@@ -67,6 +67,96 @@ module DocRepo
       "#{host}:#{uri}"
     end
 
+    def conditional_headers(expired)
+      # Origin servers are supposed to treat `If-None-Match` with higher
+      # precedences than `If-Modified-Since` according to the RFC:
+      #
+      # > A recipient cache or origin server MUST evaluate the request
+      # > preconditions defined by this specification in the following order:
+      # >
+      # > 1.  When recipient is the origin server and If-Match is present,
+      # >     evaluate the If-Match precondition:
+      # >
+      # >     *  if true, continue to step 3
+      # >
+      # >     *  if false, respond 412 (Precondition Failed) unless it can be
+      # >        determined that the state-changing request has already
+      # >        succeeded (see Section 3.1)
+      # >
+      # > 2.  When recipient is the origin server, If-Match is not present, and
+      # >     If-Unmodified-Since is present, evaluate the If-Unmodified-Since
+      # >     precondition:
+      # >
+      # >     *  if true, continue to step 3
+      # >
+      # >     *  if false, respond 412 (Precondition Failed) unless it can be
+      # >        determined that the state-changing request has already
+      # >        succeeded (see Section 3.4)
+      # >
+      # > 3.  When If-None-Match is present, evaluate the If-None-Match
+      # >     precondition:
+      # >
+      # >     *  if true, continue to step 5
+      # >
+      # >     *  if false for GET/HEAD, respond 304 (Not Modified)
+      # >
+      # >     *  if false for other methods, respond 412 (Precondition Failed)
+      # >
+      # > 4.  When the method is GET or HEAD, If-None-Match is not present, and
+      # >     If-Modified-Since is present, evaluate the If-Modified-Since
+      # >     precondition:
+      # >
+      # >     *  if true, continue to step 5
+      # >
+      # >     *  if false, respond 304 (Not Modified)
+      # >
+      # > -- https://tools.ietf.org/html/rfc7232#section-6
+      #
+      # This allows clients, and caches, some flexibility in how they generate
+      # the `If-Modified-Since` header:
+      #
+      # > When used for cache updates, a cache will typically use the value of
+      # > the cached message's Last-Modified field to generate the field value
+      # > of If-Modified-Since.  This behavior is most interoperable for cases
+      # > where clocks are poorly synchronized or when the server has chosen to
+      # > only honor exact timestamp matches (due to a problem with
+      # > Last-Modified dates that appear to go "back in time" when the origin
+      # > server's clock is corrected or a representation is restored from an
+      # > archived backup).  However, caches occasionally generate the field
+      # > value based on other data, such as the Date header field of the
+      # > cached message or the local clock time that the message was received,
+      # > particularly when the cached message does not contain a Last-Modified
+      # > field.
+      # >
+      # > -- https://tools.ietf.org/html/rfc7232#section-3.3
+      #
+      # However, the Github raw content server (GRC) does not respect this.
+      # This may be due to the fact that the GRC does not send a
+      # `Last-Modified` header in replies. If we take that into account this
+      # behavior _may_ make sense if we assume the GRC  is following the now
+      # obsolete HTTP/1.1 RFC 2616:
+      #
+      # > An HTTP/1.1 origin server, upon receiving a conditional request that
+      # > includes both a Last-Modified date (e.g., in an If-Modified-Since or
+      # > If-Unmodified-Since header field) and one or more entity tags (e.g.,
+      # > in an If-Match, If-None-Match, or If-Range header field) as cache
+      # > validators, MUST NOT return a response status of 304 (Not Modified)
+      # > unless doing so is consistent with all of the conditional header
+      # > fields in the request.
+      # >
+      # > -- https://tools.ietf.org/html/rfc2616#section-13.3.4
+      #
+      # So to actually receive `304 Not Modified` replies from GRC, but also
+      # try to be compatible with more current servers, this only sets
+      # `If-Modified-Since` based on the `Last-Modified` value (i.e. we no
+      # longer fall back to the `Date` value).
+      preconditions = {
+        "If-None-Match" => expired["ETag"],
+        "If-Modified-Since" => expired["Last-Modified"],
+      }
+      preconditions.keep_if { |_k, v| v }
+    end
+
     def expired?(resp)
       # TODO: Use `Cache-Control` header when available
       expires_at = resp['Expires']
@@ -97,30 +187,8 @@ module DocRepo
     end
 
     def refresh(uri, expired)
-      # Per the HTTP 1.1 RFC regarding the `If-Modified-Since` header:
-      #
-      # > When used for cache updates, a cache will typically use the value of
-      # > the cached message's Last-Modified field to generate the field value
-      # > of If-Modified-Since.  This behavior is most interoperable for cases
-      # > where clocks are poorly synchronized or when the server has chosen to
-      # > only honor exact timestamp matches (due to a problem with
-      # > Last-Modified dates that appear to go "back in time" when the origin
-      # > server's clock is corrected or a representation is restored from an
-      # > archived backup).  However, caches occasionally generate the field
-      # > value based on other data, such as the Date header field of the
-      # > cached message or the local clock time that the message was received,
-      # > particularly when the cached message does not contain a Last-Modified
-      # > field.
-      # >
-      # > -- https://tools.ietf.org/html/rfc7232#section-3.3
       fresh = Net::HTTP.start(host, opts) { |http|
-        http.get(
-          uri,
-          {
-            "If-None-Match" => expired["ETag"],
-            "If-Modified-Since" => expired["Last-Modified"] || expired["Date"],
-          }.keep_if { |_k, v| v }
-        )
+        http.get(uri, conditional_headers(expired))
       }
       if Net::HTTPNotModified === fresh
         fresh.each_header do |k, v|

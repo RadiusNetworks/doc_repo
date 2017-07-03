@@ -304,21 +304,6 @@ RSpec.describe DocRepo::NetHttpAdapter do
         .to_return(status: 304)
       cached_adapter.retrieve "/uri/1"
       expect(conditional_get).to have_been_requested
-
-      # Falls back to `Date` when `Last-Modified` isn't set
-      cache = mem_cache.cache["any.host:/uri/1"]
-      cache.delete "Last-Modified"
-      cache["Date"] = "Sat, 01 Jul 2017 19:00:01 GMT"
-      date_conditional_get = stub_request(:get, %r(.*/uri/1))
-        .with(
-          headers: {
-            "If-None-Match" => "Any ETag",
-            "If-Modified-Since" => "Sat, 01 Jul 2017 19:00:01 GMT",
-          }
-        )
-        .to_return(status: 304)
-      cached_adapter.retrieve "/uri/1"
-      expect(date_conditional_get).to have_been_requested
     end
 
     it "considers an invalid `Expires` header as expired" do
