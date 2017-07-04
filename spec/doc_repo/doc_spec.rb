@@ -16,9 +16,10 @@ RSpec.describe DocRepo::Doc do
     let(:response_cache_headers) {
       # Make string keys mutable to allow testing mutations
       {
-        "ETag" => String.new("Any ETag"),
+        "ETag" => String.new("\"Any ETag\""),
         "Last-Modified" => String.new("Sat, 01 Jul 2017 18:18:33 GMT"),
         "Content-Type" => String.new("text/plain"),
+        "Cache-Control" => String.new("max-age=300, private, must-revalidate"),
       }
     }
 
@@ -47,7 +48,7 @@ RSpec.describe DocRepo::Doc do
     end
 
     it "sets the E-Tag from the cache headers" do
-      expect(a_document.etag).to eq("Any ETag").and be_frozen
+      expect(a_document.etag).to eq("\"Any ETag\"").and be_frozen
       expect(response_cache_headers["ETag"]).not_to be_frozen
     end
 
@@ -64,6 +65,24 @@ RSpec.describe DocRepo::Doc do
     it "sets the content type according to the associated header" do
       expect(a_document.content_type).to eq "text/plain"
     end
+
+    it "uses the URI as the cache key" do
+      expect(a_document.cache_key).to eq "/any/uri"
+    end
+
+    it "sets the cache version based on the raw content" do
+      content_version = Digest::SHA1.hexdigest("Any Content Body")
+      expect(a_document.cache_version).to eq(content_version).and be_frozen
+    end
+
+    it "has a convenience reader for a versioned cache key" do
+      content_version = Digest::SHA1.hexdigest("Any Content Body")
+      expect(a_document.cache_key_with_version).to eq "/any/uri-#{content_version}"
+    end
+
+    it "allows access to the cache control settings" do
+      expect(a_document.cache_control).to eq "max-age=300, private, must-revalidate"
+    end
   end
 
   context "a standard document", "with missing headers" do
@@ -73,8 +92,15 @@ RSpec.describe DocRepo::Doc do
 
     let(:headerless_http_ok_response) {
       # Use either `:[] => nil` or `"[]" => nil` as `[]: nil` is invalid Ruby
-      instance_double("Net::HTTPOK", "code" => "200", "[]" => nil)
+      instance_double(
+        "Net::HTTPOK",
+        "code" => "200",
+        "body" => nil,
+        "[]" => nil,
+      )
     }
+
+    EMPTY_STRING_SHA1 = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
     it "may not have an E-Tag" do
       expect(uncachable_document.etag).to be nil
@@ -92,6 +118,18 @@ RSpec.describe DocRepo::Doc do
 
     it "may not have any content type" do
       expect(uncachable_document.content_type).to be nil
+    end
+
+    it "always has a cache version" do
+      expect(uncachable_document.cache_version).to eq EMPTY_STRING_SHA1
+    end
+
+    it "has a convenience reader for a versioned cache key" do
+      expect(uncachable_document.cache_key_with_version).to eq "/any/uri-#{EMPTY_STRING_SHA1}"
+    end
+
+    it "may not have any cache control settings" do
+      expect(uncachable_document.cache_control).to be nil
     end
   end
 
