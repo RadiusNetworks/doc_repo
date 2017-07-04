@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require_relative 'converters/markdown_parser'
 require 'digest'
 require 'time'
 
@@ -58,6 +59,21 @@ module DocRepo
 
     def success?
       true
+    end
+
+    def to_html(_options = {})
+      Converters::MarkdownParser.new(
+        extensions: %i[
+          no_intra_emphasis
+          tables
+          fenced_code_blocks
+          autolink
+          strikethrough
+          lax_spacing
+          superscript
+          with_toc_data
+        ]
+      ).convert(content.to_s)
     end
   end
 end
