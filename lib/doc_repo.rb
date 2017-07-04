@@ -20,6 +20,10 @@ module DocRepo
   autoload :Repository, "doc_repo/repository"
   autoload :ResultHandler, "doc_repo/result_handler"
 
+  if defined?(Rails)
+    require_relative "doc_repo/rails"
+  end
+
   class << self
     attr_writer :configuration
 

@@ -7,10 +7,25 @@ module DocRepo
   class Doc
     include HttpResult
 
+    # @api private
+    module Cache
+      attr_reader :cache_key, :cache_version
+
+      def cache_control
+        http['Cache-Control']
+      end
+
+      def cache_key_with_version
+        "#{cache_key}-#{cache_version}"
+      end
+    end
+    include Cache
+
     def initialize(uri, http_response)
       @http = http_response
       init_result_readers(uri, @http.code)
       @etag = @http['ETag'].dup.freeze
+      @cache_key = uri.dup.freeze
 
       # The Github raw server currently provides ETags for content. It's
       # possible a change in servers/APIs may cause some content to no longer
@@ -33,19 +48,10 @@ module DocRepo
       @last_modified = Time.httpdate(@http['Last-Modified']).freeze rescue nil
     end
 
-    attr_reader :cache_version, :etag, :last_modified
-    alias_method :cache_key, :uri
+    attr_reader :etag, :last_modified
 
     attr_reader :http
     private :http
-
-    def cache_control
-      http['Cache-Control']
-    end
-
-    def cache_key_with_version
-      "#{cache_key}-#{cache_version}"
-    end
 
     def content
       http.body
