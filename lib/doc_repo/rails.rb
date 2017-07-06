@@ -1,19 +1,9 @@
+# frozen_string_literal: true
+
 # Monkey patches to work with-in Rails conventions
 module DocRepo
   module Rails
     module Modelish
-      # Prior to ActiveSupport 5.2 it is assumed the `cache_key` value contains
-      # version information.
-      module VersionedCacheKey
-        def cache_key
-          "#{super}-#{cache_version}"
-        end
-        alias_method :cache_key_with_version, :cache_key
-      end
-      if Rails.gem_version < Gem::Version.new("5.2.0")
-        include VersionedCacheKey
-      end
-
       # For some reason Rails _only_ calls `to_text` for the following:
       #
       #     render html: doc
@@ -34,6 +24,12 @@ module DocRepo
       end
     end
   end
+end
+
+# Prior to ActiveSupport 5.2 it is assumed the `cache_key` value contains
+# version information.
+if Rails.gem_version < Gem::Version.new("5.2.0")
+  require_relative 'rails/legacy_versioned_cache'
 end
 
 DocRepo::Doc.class_exec do
