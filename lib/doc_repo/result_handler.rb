@@ -19,6 +19,7 @@ module DocRepo
 
     def initialize
       @actions = {}
+      yield self if block_given?
     end
 
     def_delegators :actions, :[], :each, :fetch

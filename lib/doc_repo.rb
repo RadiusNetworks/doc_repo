@@ -29,7 +29,7 @@ module DocRepo
   end
 
   def self.configure
-    yield(configuration) if block_given?
+    yield(configuration)
   end
 
   def self.request(slug, &block)

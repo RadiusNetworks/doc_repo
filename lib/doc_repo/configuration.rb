@@ -52,6 +52,10 @@ module DocRepo
 
     setting :repo
 
+    def initialize
+      yield self if block_given?
+    end
+
     def inspect
       settings = to_h.map { |setting, value| "#{setting}=#{value.inspect}" }
                      .join(", ")

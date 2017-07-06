@@ -14,6 +14,11 @@ RSpec.describe DocRepo::Configuration do
   context "new configuration" do
     subject(:default_config) { DocRepo::Configuration.new }
 
+    it "yields itself when given a block" do
+      a_config = DocRepo::Configuration.new { |c| c.repo = "Any Repo" }
+      expect(a_config.repo).to eq "Any Repo"
+    end
+
     it "defaults to the 'master' branch" do
       expect(default_config.branch).to eq 'master'
     end

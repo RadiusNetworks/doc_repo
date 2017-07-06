@@ -3,7 +3,7 @@
 RSpec.describe DocRepo::Repository do
 
   def build_config(settings)
-    DocRepo::Configuration.new.tap { |c|
+    DocRepo::Configuration.new { |c|
       settings.each do |name, value|
         c.public_send "#{name}=", value
       end
@@ -11,7 +11,7 @@ RSpec.describe DocRepo::Repository do
   end
 
   def any_handler
-    DocRepo::ResultHandler.new.tap do |h|
+    DocRepo::ResultHandler.new do |h|
       h.complete {}
       h.error {}
       h.not_found {}

@@ -25,6 +25,12 @@ RSpec.describe DocRepo::ResultHandler do
     end
   end
 
+  it "creating a new handler yields itself when given a block" do
+    an_action = -> { }
+    a_handler = DocRepo::ResultHandler.new { |h| h.complete(&an_action) }
+    expect(a_handler[:complete]).to be an_action
+  end
+
   it "has no actions by default" do
     expect(DocRepo::ResultHandler.new.each.to_a).to be_empty
   end
