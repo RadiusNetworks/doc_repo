@@ -24,7 +24,6 @@ module DocRepo
     def initialize(uri, http_response)
       @http = http_response
       init_result_readers(uri, @http.code)
-      @etag = @http['ETag'].dup.freeze
       @cache_key = uri.dup.freeze
 
       # The Github raw server currently provides ETags for content. It's
@@ -48,7 +47,7 @@ module DocRepo
       @last_modified = Time.httpdate(@http['Last-Modified']).freeze rescue nil
     end
 
-    attr_reader :etag, :last_modified
+    attr_reader :last_modified
 
     attr_reader :http
     private :http

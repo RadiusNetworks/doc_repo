@@ -372,7 +372,6 @@ RSpec.describe DocRepo::NetHttpAdapter do
         code: 200,
         content: "Original Body",
         content_type: "Updated Content",
-        etag: "Updated ETag",
       )
       # Working with headers is painful with Net::HTTP responses
       expect(mem_cache.cache["any.host:/uri/1"].to_hash).to include(
@@ -423,7 +422,6 @@ RSpec.describe DocRepo::NetHttpAdapter do
         code: 201,
         content: "Updated Body",
         content_type: "Updated Content",
-        etag: "Updated ETag",
       )
       # Working with headers is painful with Net::HTTP responses
       expect(mem_cache.cache["any.host:/uri/1"].to_hash).to eq(

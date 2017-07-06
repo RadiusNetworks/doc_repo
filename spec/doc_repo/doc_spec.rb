@@ -17,7 +17,6 @@ RSpec.describe DocRepo::Doc do
     let(:response_cache_headers) {
       # Make string keys mutable to allow testing mutations
       {
-        "ETag" => String.new("\"Any ETag\""),
         "Last-Modified" => String.new("Sat, 01 Jul 2017 18:18:33 GMT"),
         "Content-Type" => String.new("text/plain"),
         "Cache-Control" => String.new("max-age=300, private, must-revalidate"),
@@ -46,11 +45,6 @@ RSpec.describe DocRepo::Doc do
 
     it "has a URI" do
       expect(a_document.uri).to eq "/any/uri"
-    end
-
-    it "sets the E-Tag from the cache headers" do
-      expect(a_document.etag).to eq("\"Any ETag\"").and be_frozen
-      expect(response_cache_headers["ETag"]).not_to be_frozen
     end
 
     it "sets the last modified time from the cache headers" do
@@ -102,10 +96,6 @@ RSpec.describe DocRepo::Doc do
     }
 
     EMPTY_STRING_SHA1 = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
-
-    it "may not have an E-Tag" do
-      expect(uncachable_document.etag).to be nil
-    end
 
     it "may not have a last modified timestamp", :aggregate_failures do
       expect(uncachable_document.last_modified).to be nil
