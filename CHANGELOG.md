@@ -1,6 +1,6 @@
-## Development
+## v1.0.0-beta.1 / 2017-07-07
 
-[Full Changelog](http://github.com/RadiusNetworks/doc_repo/compare/v0.1.1...master)
+[Full Changelog](http://github.com/RadiusNetworks/doc_repo/compare/v0.1.1...v1.0.0-beta.1)
 
 Enhancements:
 
