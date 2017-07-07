@@ -7,3 +7,8 @@ group :debug do
   gem "pry-nav"
   gem "travis-lint", require: false
 end
+
+group :benchmarks do
+  gem "kalibera", require: false
+  gem "benchmark-ips", require: false
+end

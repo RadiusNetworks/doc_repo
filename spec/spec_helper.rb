@@ -96,7 +96,12 @@ RSpec.configure do |config|
   # test failures related to randomization by passing the same `--seed` value
   # as the one that triggered the failure.
   Kernel.srand config.seed
+
+  # Custom shared example aliases for better output grammar
+  config.alias_it_should_behave_like_to :include_behavior
 end
+
+require 'webmock/rspec'
 
 # Load our lib after warnings are enabled so we can fix them
 require 'doc_repo'

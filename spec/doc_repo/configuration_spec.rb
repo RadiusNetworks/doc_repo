@@ -1,55 +1,110 @@
-require 'support/using_env'
+# frozen_string_literal: true
 
 RSpec.describe DocRepo::Configuration do
 
-  context "without environment variables configured" do
-    subject(:default_config) { DocRepo::Configuration.new }
-
-    around do |example|
-      env = {
-        'DOC_REPO_ORG'      => nil,
-        'DOC_REPO_REPONAME' => nil,
-        'DOC_REPO_BRANCH'   => nil,
-      }
-      using_env(env, &example)
-    end
-
-    it "has no org" do
-      expect(default_config.org).to be nil
-    end
-
-    it "has no repo" do
-      expect(default_config.repo).to be nil
-    end
-
-    it "use the 'master' branch" do
-      expect(default_config.branch).to eq 'master'
+  shared_examples "has setting" do |setting_name|
+    it "allows configuring `#{setting_name}`" do
+      a_config = DocRepo::Configuration.new
+      expect {
+        a_config.public_send "#{setting_name}=", "Any Value"
+      }.to change(a_config, setting_name).to "Any Value"
     end
   end
 
-  context "with environment variables configured" do
-    subject(:default_env_config) { DocRepo::Configuration.new }
+  context "new configuration" do
+    subject(:default_config) { DocRepo::Configuration.new }
 
-    around do |example|
-      env = {
-        'DOC_REPO_ORG'      => 'the-silence',
-        'DOC_REPO_REPONAME' => 'falls',
-        'DOC_REPO_BRANCH'   => 'ask_the_question',
-      }
-      using_env(env, &example)
+    it "yields itself when given a block" do
+      a_config = DocRepo::Configuration.new { |c| c.repo = "Any Repo" }
+      expect(a_config.repo).to eq "Any Repo"
     end
 
-    it "uses DOC_REPO_ORG for the default org" do
-      expect(default_env_config.org).to eq 'the-silence'
+    it "defaults to the 'master' branch" do
+      expect(default_config.branch).to eq 'master'
     end
 
-    it "uses DOC_REPO_REPONAME for the default repo" do
-      expect(default_env_config.repo).to eq 'falls'
+    it "defaults to empty cache options" do
+      expect(default_config.cache_options).to eq({})
     end
 
-    it "uses DOC_REPO_BRANCH for the default branch" do
-      expect(default_env_config.branch).to eq 'ask_the_question'
+    it "defaults to a null cache store" do
+      expect(default_config.cache_store).to be DocRepo::NullCache.instance
     end
+
+    it "defaults to markdown and HTML as documentation formats" do
+      expect(default_config.doc_formats).to match_array %w[
+        .md
+        .markdown
+        .htm
+        .html
+      ]
+    end
+
+    it "defaults to a 'docs' root path" do
+      expect(default_config.doc_root).to eq 'docs'
+    end
+
+    it "defaults to '.md' for the fallback extension" do
+      expect(default_config.fallback_ext).to eq '.md'
+    end
+
+    it "has no org set" do
+      expect(default_config.org).to be nil
+    end
+
+    it "has no repo set" do
+      expect(default_config.repo).to be nil
+    end
+
+    it "converting to a hash includes all settings" do
+      expect(default_config.to_h.keys).to match_array %i[
+        branch
+        cache_options
+        cache_store
+        doc_formats
+        doc_root
+        fallback_ext
+        org
+        repo
+      ]
+    end
+  end
+
+  include_examples "has setting", :branch
+  include_examples "has setting", :cache_options
+  include_examples "has setting", :cache_store
+  include_examples "has setting", :doc_formats
+  include_examples "has setting", :doc_root
+  include_examples "has setting", :fallback_ext
+  include_examples "has setting", :org
+  include_examples "has setting", :repo
+
+  it "converting to a hash maps all settings to configured values" do
+    a_config = DocRepo::Configuration.new
+    a_config.branch = "Any Branch"
+    a_config.cache_options = "Any Cache Options"
+    a_config.cache_store = "Any Cache Store"
+    a_config.doc_formats = %w[ .any .formats ]
+    a_config.doc_root = "Any Doc Root"
+    a_config.fallback_ext = ".anything"
+    a_config.org = "Any Org"
+    a_config.repo = "Any Repo"
+    expect(a_config.to_h).to eq(
+      branch: "Any Branch",
+      cache_options: "Any Cache Options",
+      cache_store: "Any Cache Store",
+      doc_formats: %w[ .any .formats ],
+      doc_root: "Any Doc Root",
+      fallback_ext: ".anything",
+      org: "Any Org",
+      repo: "Any Repo",
+    )
+  end
+
+  it "doesn't allow creating new settings" do
+    expect {
+      DocRepo::Configuration.add_setting :new_setting
+    }.to raise_error NoMethodError
   end
 
 end
